@@ -2,115 +2,90 @@
 
 This project provides a Bash installer script (`install.sh`) that sets up an automated system to collect Nginx log files and copy them to a central directory (`/opt/server_logs/prod1`) with timestamped filenames.
 
----
+# Install Instructions
 
-## Installation
+Follow these steps to set up the log sender system.
 
-### 1. Clone the Repository
+## 1. Run the Installer Script
+
+Copy the following into a file called `install.sh`:
+
 ```bash
-git clone https://github.com/sarthakbachhar/nginx-log-sending-script.git
-2. Make the Script Executable
-bash
-Copy
-Edit
-chmod +x install.sh
-3. Run the Installer
-bash
-Copy
-Edit
-sudo ./install.sh
- Note: sudo is required because the script updates the system, creates directories in /opt/, and sets up a root cronjob.
+#!/bin/bash
+set -e
 
- What the Script Does
-System Update
+# To update system
+echo "Updating system"
+sudo apt-get update -y
+sudo apt-get upgrade -y
 
-Runs apt-get update and apt-get upgrade.
+# To Create destination folder
+sudo mkdir -p /opt/server_logs/prod1
+sudo chmod 777 /opt/server_logs/prod1
 
-Creates Destination Directory
+# To place logSender.js
+echo "Creating logSender.js..."
+cat << 'EOF' | sudo tee /opt/server_logs/logSender.js > /dev/null
+#!/usr/bin/env node
+const fs = require('fs');
+const path = require('path');
+const logFiles = [
+  '/var/log/nginx/access.log.1',
+  '/var/log/nginx/error.log.1'
+];
+const destDir = '/opt/server_logs/prod1';
+if (!fs.existsSync(destDir)) { fs.mkdirSync(destDir, { recursive: true }); }
+const dt = new Date();
+const timestamp = dt.toISOString().replace(/:/g, '-');
+logFiles.forEach(file => {
+  if (fs.existsSync(file)) {
+    const base = path.basename(file).split('.')[0];
+    const destFile = path.join(destDir, `${base}.${timestamp}`);
+    fs.copyFileSync(file, destFile);
+    console.log(`Copied ${file} -> ${destFile}`);
+  }
+});
+EOF
 
-/opt/server_logs/prod1 is created if it does not exist.
+# To make script executable
+sudo chmod +x /opt/server_logs/logSender.js
 
-Directory is made writable by all (chmod 777).
+# To create sudo cronjob for root
+echo "Setting up cronjob..."
+sudo bash -c 'echo "0 * * * * /opt/server_logs/logSender.js >> /opt/server_logs/prod1/cron.log 2>&1" > /etc/cron.d/logSender'
+sudo chmod 644 /etc/cron.d/logSender
 
-Deploys logSender.js
+echo "Installation complete!"
 
-A Node.js script is created at:
+2. What This Script Does
 
-bash
-Copy
-Edit
-/opt/server_logs/logSender.js
-This script copies:
+Updates the system
 
-/var/log/nginx/access.log.1
+Creates destination folder: /opt/server_logs/prod1
 
-/var/log/nginx/error.log.1
+Installs logSender.js into /opt/server_logs/
 
-Destination filenames include a timestamp:
+Sets permissions
 
-go
-Copy
-Edit
-access.2025-08-22T12-00-00.000Z
-error.2025-08-22T12-00-00.000Z
-Sets Up Cronjob
+Creates a cronjob for root to run every hour and copy logs to /opt/server_logs/prod1
 
-A root-level cronjob is created at /etc/cron.d/logSender:
+Provides manual run option
 
-bash
-Copy
-Edit
-0 * * * * /opt/server_logs/logSender.js >> /opt/server_logs/prod1/cron.log 2>&1
-Runs every hour to copy logs automatically.
+3. Run Manually
 
-Logs cron activity into /opt/server_logs/prod1/cron.log.
+To copy logs on demand:
 
-Manual Run
-
-You can trigger it anytime with:
-
-bash
-Copy
-Edit
 sudo /opt/server_logs/logSender.js
- Directory Structure
-After installation, you’ll have:
 
-lua
-Copy
-Edit
-/opt/server_logs/
- └── prod1/
-      ├── access.2025-08-22T12-00-00.000Z
-      ├── error.2025-08-22T12-00-00.000Z
-      ├── cron.log
-      └── ...
- Verification
-Check copied logs
+4. Verify Cronjob
 
-bash
-Copy
-Edit
-ls -l /opt/server_logs/prod1
-Check cron logs
+Check that cronjob is installed:
 
-bash
-Copy
-Edit
-cat /opt/server_logs/prod1/cron.log
-Run manually
+cat /etc/cron.d/logSender
 
-bash
-Copy
-Edit
-sudo /opt/server_logs/logSender.js
-Notes
-The script assumes Nginx logs are located in:
 
-/var/log/nginx/access.log.1
+Check cron logs:
 
-/var/log/nginx/error.log.1
-
-Make sure Node.js is installed system-wide (available as /usr/bin/node).
-
-The copied log files use UTC timestamps (toISOString()).
+grep CRON /var/log/syslog
+echo "Cronjob set to run every hour and send logs to /opt/server_logs/prod1"
+echo "To run manually: sudo /opt/server_logs/logSender.js"
