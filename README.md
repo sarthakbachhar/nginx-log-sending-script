@@ -1,14 +1,14 @@
 # Nginx Log Sender – Automated Installer
 
-This project provides a Bash installer script (`install.sh`) that sets up an automated system to collect Nginx log files and copy them to a central directory (`/opt/server_logs/prod1`) with timestamped filenames.
+This project provides a **Bash installer script (`install.sh`)** that sets up an automated system to collect Nginx log files and copy them to a central directory (`/opt/server_logs/prod1`) with timestamped filenames.
 
-# Install Instructions
+---
 
-Follow these steps to set up the log sender system.
+## Install Instructions
 
-## 1. Run the Installer Script
+### 1. Run the Installer Script
 
-Copy the following into a file called `install.sh`:
+Create a file called **`install.sh`** and paste the following:
 
 ```bash
 #!/bin/bash
@@ -56,9 +56,21 @@ sudo bash -c 'echo "0 * * * * /opt/server_logs/logSender.js >> /opt/server_logs/
 sudo chmod 644 /etc/cron.d/logSender
 
 echo "Installation complete!"
+echo "Cronjob set to run every hour and send logs to /opt/server_logs/prod1"
+echo "To run manually: sudo /opt/server_logs/logSender.js"
+Make it executable:
 
+bash
+Copy
+Edit
+chmod +x install.sh
+Run it:
+
+bash
+Copy
+Edit
+./install.sh
 2. What This Script Does
-
 Updates the system
 
 Creates destination folder: /opt/server_logs/prod1
@@ -72,20 +84,22 @@ Creates a cronjob for root to run every hour and copy logs to /opt/server_logs/p
 Provides manual run option
 
 3. Run Manually
-
 To copy logs on demand:
 
+bash
+Copy
+Edit
 sudo /opt/server_logs/logSender.js
-
 4. Verify Cronjob
-
 Check that cronjob is installed:
 
+bash
+Copy
+Edit
 cat /etc/cron.d/logSender
-
-
 Check cron logs:
 
+bash
+Copy
+Edit
 grep CRON /var/log/syslog
-echo "Cronjob set to run every hour and send logs to /opt/server_logs/prod1"
-echo "To run manually: sudo /opt/server_logs/logSender.js"
